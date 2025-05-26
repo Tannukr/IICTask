@@ -100,10 +100,9 @@ Visit [http://localhost:5000](http://localhost:5000) in your browser.
 - Use strong, unique passwords for admin and users.
 - Never commit real credentials to version control.
 
-## License
-*Specify your license here*
+
 
 ---
 
 ## Credits
-Developed by [Your Name]. 
+Developed by Tannu. 
