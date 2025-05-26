@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        transition: transform 0.3s ease;
+        margin-bottom: 20px;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .task-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    .task-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .priority-high { border-left: 4px solid #ff6b6b; }
+    .priority-medium { border-left: 4px solid #ffd93d; }
+    .priority-low { border-left: 4px solid #6bff6b; }
+    .task-actions {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .task-card:hover .task-actions {
+        opacity: 1;
+    }
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .category-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    .filter-section {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .btn-filter {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .btn-filter:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+    .btn-filter.active {
+        background: rgba(255, 255, 255, 0.4);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    .chart-container {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .form-control {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: white;
+        box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
+    }
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    .form-select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    .form-select:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: white;
+        box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
+    }
+    .form-select option {
+        background: #1e3c72;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Total Tasks</h3>
+                    <h2 class="display-4">{{ total_tasks }}</h2>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" style="width: {{ (completed_tasks/total_tasks*100) if total_tasks > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Completed Tasks</h3>
+                    <h2 class="display-4">{{ completed_tasks }}</h2>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {{ (completed_tasks/total_tasks*100) if total_tasks > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Pending Tasks</h3>
+                    <h2 class="display-4">{{ total_tasks - completed_tasks }}</h2>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: {{ ((total_tasks-completed_tasks)/total_tasks*100) if total_tasks > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Add New Task</h4>
+                    <form method="POST" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" name="task" placeholder="Enter task description" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <select class="form-select" name="priority">
+                                    <option value="Low">Low Priority</option>
+                                    <option value="Medium" selected>Medium Priority</option>
+                                    <option value="High">High Priority</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <input type="text" class="form-control" name="category" placeholder="Category (optional)" value="General">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <input type="datetime-local" class="form-control" name="deadline">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Filter Tasks</h5>
+                    <div class="btn-group">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-filter {% if selected_category == 'all' %}active{% endif %}">
+                            All
+                        </a>
+                        {% for category in categories %}
+                        <a href="{{ url_for('dashboard', category=category) }}" class="btn btn-filter {% if selected_category == category %}active{% endif %}">
+                            {{ category }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Your Tasks</h4>
+                    {% if tasks %}
+                        {% for task in tasks %}
+                            <div class="task-card priority-{{ task.priority.lower() }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="card-title mb-1">{{ task.content }}</h5>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="category-badge">{{ task.category }}</span>
+                                                {% if task.deadline %}
+                                                    <small class="text-light">
+                                                        <i class="fas fa-clock"></i> Due: {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="task-actions">
+                                            <a href="{{ url_for('complete_task', task_id=task.id) }}" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ url_for('delete_task', task_id=task.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this task?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-light">No tasks found. Add your first task above!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h4 class="mb-4">Task Statistics</h4>
+                <canvas id="taskChart"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Quick Actions</h4>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('completed_tasks') }}" class="btn btn-primary">
+                            <i class="fas fa-check-circle"></i> View Completed Tasks
+                        </a>
+                        <!-- <button class="btn btn-success" onclick="sendReminder()">
+                            <i class="fas fa-bell"></i> Send Reminder
+                        </button> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Task Statistics Chart
+    const ctx = document.getElementById('taskChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Pending'],
+            datasets: [{
+                data: [{{ completed_tasks }}, {{ total_tasks - completed_tasks }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)'
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Form Validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+
+    // Send Reminder Function
+    function sendReminder() {
+        fetch('/send_reminders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send reminder');
+        });
+    }
+</script>
+{% endblock %}

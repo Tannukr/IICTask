@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Task Analytics - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .analytics-card:hover {
+        transform: translateY(-5px);
+    }
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(0, 13, 255, 0.2);
+    }
+    .streak-badge {
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        margin: 5px;
+    }
+    .category-progress {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        margin: 5px 0;
+        overflow: hidden;
+    }
+    .category-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #6B73FF 0%, #000DFF 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    .chart-container {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Task Analytics Dashboard</h2>
+
+    <!-- Productivity Score Section -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="analytics-card text-center">
+                <h4>Productivity Score</h4>
+                <div class="score-circle">
+                    {{ "%.1f"|format(productivity_score) }}
+                </div>
+                <p class="mt-3">Based on completion rate and task priority</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="analytics-card text-center">
+                <h4>Task Completion Time</h4>
+                <div class="score-circle">
+                    {{ avg_completion_time }}h
+                </div>
+                <p class="mt-3">Average time to complete tasks</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="analytics-card text-center">
+                <h4>Completion Streak</h4>
+                <div class="streak-badge">
+                    Current: {{ current_streak }} days
+                </div>
+                <div class="streak-badge">
+                    Best: {{ max_streak }} days
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h4>Task Distribution</h4>
+                <canvas id="taskChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h4>Category Performance</h4>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Performance Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="analytics-card">
+                <h4>Category Performance Analysis</h4>
+                {% for category in category_performance %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>{{ category.category }}</span>
+                        <span>{{ "%.1f"|format(category.performance_rate) }}%</span>
+                    </div>
+                    <div class="category-progress">
+                        <div class="category-progress-bar" style="width: {{ category.performance_rate }}%"></div>
+                    </div>
+                    <small class="text-light">
+                        {{ category.completed }}/{{ category.total }} tasks completed
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Trend -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h4>Completion Trend (Last 7 Days)</h4>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Task Distribution Chart
+    const taskCtx = document.getElementById('taskChart').getContext('2d');
+    new Chart(taskCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Pending'],
+            datasets: [{
+                data: [{{ completed_tasks }}, {{ total_tasks - completed_tasks }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)'
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Category Performance Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ category_performance|map(attribute='category')|list|tojson }},
+            datasets: [{
+                label: 'Performance Rate (%)',
+                data: {{ category_performance|map(attribute='performance_rate')|list|tojson }},
+                backgroundColor: 'rgba(107, 115, 255, 0.8)',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Completion Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendData = {{ completion_trend|safe }};
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(item => item.date),
+            datasets: [{
+                label: 'Completed Tasks',
+                data: trendData.map(item => item.count),
+                borderColor: 'rgba(40, 167, 69, 0.8)',
+                backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %} 

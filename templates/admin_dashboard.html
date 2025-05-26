@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        min-height: 100vh;
+        color: #fff;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    .stats-card {
+        transition: transform 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .user-table {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .table {
+        color: white;
+    }
+    .table thead th {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    .table td {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .btn-action {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-action:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+    .progress {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .welcome-section {
+        text-align: center;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    .welcome-section h1 {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .completed-task-card {
+        background: rgba(40, 167, 69, 0.1);
+        border-left: 4px solid #28a745;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .completed-task-card:hover {
+        transform: translateX(5px);
+        background: rgba(40, 167, 69, 0.2);
+    }
+    .user-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="welcome-section">
+        <h1>Admin Dashboard</h1>
+        <p class="lead">Monitor user activity and manage task reminders</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Total Users</h3>
+                    <h2 class="display-4">{{ total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Total Tasks</h3>
+                    <h2 class="display-4">{{ total_tasks }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Completed</h3>
+                    <h2 class="display-4">{{ completed_tasks }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Pending</h3>
+                    <h2 class="display-4">{{ pending_tasks }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="chart-container mb-4">
+                <h3>User Activity (Last 7 Days)</h3>
+                <canvas id="activityChart"></canvas>
+            </div>
+            
+            <div class="user-table">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">User Management</h3>
+                        <button class="btn btn-action" onclick="sendRemindersToAll()">
+                            <i class="fas fa-bell"></i> Send Reminders to All
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Total Tasks</th>
+                                        <th>Completed</th>
+                                        <th>Pending</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in user_stats %}
+                                    <tr>
+                                        <td>{{ stat.username }}</td>
+                                        <td>{{ stat.email }}</td>
+                                        <td>{{ stat.total_tasks }}</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-success" 
+                                                     role="progressbar" 
+                                                     style="width: {{ (stat.completed_tasks / stat.total_tasks * 100) if stat.total_tasks > 0 else 0 }}%">
+                                                    {{ stat.completed_tasks }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-warning" 
+                                                     role="progressbar" 
+                                                     style="width: {{ (stat.pending_tasks / stat.total_tasks * 100) if stat.total_tasks > 0 else 0 }}%">
+                                                    {{ stat.pending_tasks }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-action btn-sm" onclick="sendReminderTo({{ stat.id }})">
+                                                <i class="fas fa-bell"></i>
+                                            </button>
+                                            <a href="{{ url_for('admin_view_user_tasks', user_id=stat.id) }}" class="btn btn-action btn-sm">
+                                                <i class="fas fa-tasks"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="chart-container mb-4">
+                <h3>Task Distribution</h3>
+                <canvas id="taskDistributionChart"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Recent Completed Tasks</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_completed_tasks %}
+                        {% for task in recent_completed_tasks %}
+                            <div class="completed-task-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title mb-1">{{ task.content }}</h5>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="user-badge">{{ task.user.username }}</span>
+                                                <small class="text-light">
+                                                    <i class="fas fa-check-circle"></i> Completed: {{ task.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-light">No completed tasks yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Activity Chart
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: {{ activity_labels | safe }},
+            datasets: [{
+                label: 'Tasks Created',
+                data: {{ activity_data | safe }},
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: 'white' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                x: {
+                    ticks: { color: 'white' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            }
+        }
+    });
+
+    // Task Distribution Chart
+    const distributionCtx = document.getElementById('taskDistributionChart').getContext('2d');
+    new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Pending'],
+            datasets: [{
+                data: [{{ completed_tasks }}, {{ pending_tasks }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)'
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Send reminders functions
+    function sendRemindersToAll() {
+        fetch('/admin/send_reminders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send reminders');
+        });
+    }
+
+    function sendReminderTo(userId) {
+        fetch(`/admin/send_reminder/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send reminder');
+        });
+    }
+</script>
+{% endblock %} 

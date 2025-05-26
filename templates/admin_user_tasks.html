@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}User Tasks - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    .task-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .priority-high { border-left: 4px solid #ff6b6b; }
+    .priority-medium { border-left: 4px solid #ffd93d; }
+    .priority-low { border-left: 4px solid #6bff6b; }
+    .completed {
+        background: rgba(40, 167, 69, 0.1);
+        border-left: 4px solid #28a745;
+    }
+    .stats-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .category-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    .chart-container {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Tasks for {{ user.username }}</h2>
+        <button class="btn btn-primary" onclick="sendReminder('{{ user.id }}')">
+            <i class="fas fa-bell me-2"></i>Send Reminder
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <h4>Task Statistics</h4>
+                <p class="mb-1">Total Tasks: {{ total_tasks }}</p>
+                <p class="mb-1">Completed: {{ completed_tasks }}</p>
+                <p class="mb-0">Pending: {{ pending_tasks }}</p>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="chart-container">
+                <h4>Task Distribution</h4>
+                <canvas id="taskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h4>Category Distribution</h4>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h4>Priority Distribution</h4>
+                <canvas id="priorityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h4>Completion Trend (Last 7 Days)</h4>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Pending Tasks</h4>
+            {% for task in tasks if not task.completed %}
+            <div class="card task-card priority-{{ task.priority.lower() }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title">{{ task.content }}</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="category-badge">{{ task.category }}</span>
+                                {% if task.deadline %}
+                                <small class="text-light">
+                                    <i class="fas fa-clock"></i> Due: {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="col-md-6">
+            <h4>Completed Tasks</h4>
+            {% for task in tasks if task.completed %}
+            <div class="card task-card completed">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title">{{ task.content }}</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="category-badge">{{ task.category }}</span>
+                                {% if task.completed_at %}
+                                <small class="text-light">
+                                    <i class="fas fa-check-circle"></i> Completed: {{ task.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Task Distribution Chart
+    const taskCtx = document.getElementById('taskChart').getContext('2d');
+    new Chart(taskCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Pending'],
+            datasets: [{
+                data: [{{ completed_tasks }}, {{ pending_tasks }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)'
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Category Distribution Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ categories|map(attribute=0)|list|tojson }},
+            datasets: [{
+                data: {{ categories|map(attribute=1)|list|tojson }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Priority Distribution Chart
+    const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+    new Chart(priorityCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ priorities|map(attribute=0)|list|tojson }},
+            datasets: [{
+                data: {{ priorities|map(attribute=1)|list|tojson }},
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.8)',  // High
+                    'rgba(255, 193, 7, 0.8)',  // Medium
+                    'rgba(40, 167, 69, 0.8)'   // Low
+                ],
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+
+    // Completion Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendData = {{ completion_trend|safe }};
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(item => item.date),
+            datasets: [{
+                label: 'Completed Tasks',
+                data: trendData.map(item => item.count),
+                borderColor: 'rgba(40, 167, 69, 0.8)',
+                backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    function sendReminder(userId) {
+        fetch(`/admin/send_reminder/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send reminder');
+        });
+    }
+</script>
+{% endblock %} 
