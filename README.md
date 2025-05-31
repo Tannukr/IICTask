@@ -14,11 +14,6 @@ TaskMaster is a full-featured To-Do web application built with Flask. It support
 - Admin dashboard for managing users and sending reminders
 - Statistics and analytics for tasks
 - Responsive, modern UI with custom CSS
-
-## Demo
-
-*Add screenshots or a demo GIF here*
-
 ---
 
 ## Getting Started
@@ -27,17 +22,11 @@ TaskMaster is a full-featured To-Do web application built with Flask. It support
 - Python 3.7+
 - pip
 
-### Installation
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
-   cd <repo-directory>
-   ```
-2. **Install dependencies:**
+**Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
-3. **Set up environment variables:**
+ **Set up environment variables:**
    Create a `.env` file in the root directory with the following (replace with your credentials):
    ```env
    EMAIL_USER=your_gmail@gmail.com
@@ -45,22 +34,9 @@ TaskMaster is a full-featured To-Do web application built with Flask. It support
    ```
    > **Note:** For Gmail, you may need to use an App Password.
 
-4. **Initialize the database:**
+ **Initialize the database:**
    ```bash
    python app.py  # The database will be created on first run
-   ```
-5. **Create the admin user:**
-   ```bash
-   python create_admin.py
-   ```
-   This will create an admin with:
-   - Username: `admin`
-   - Email: `admin@gmail.com`
-   - Password: `admin123`
-
-6. **(Optional) Run migration if needed:**
-   ```bash
-   python migrate.py
    ```
 
 ### Running the App
